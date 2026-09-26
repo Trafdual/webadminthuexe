@@ -2,9 +2,8 @@ FROM dunglas/frankenphp:php8.3
 
 WORKDIR /app
 
-# PHP extensions thường cần cho Laravel
+# PHP extensions Laravel cần
 RUN install-php-extensions \
-    pdo_mysql \
     mbstring \
     bcmath \
     intl \
@@ -13,27 +12,37 @@ RUN install-php-extensions \
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy source
-COPY . /app
+# Copy composer files trước để tận dụng Docker cache
+COPY composer.json composer.lock ./
 
-# Cài PHP dependencies
+# Cài dependencies
 RUN composer install \
     --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --no-progress \
     --optimize-autoloader \
-    --no-interaction
+    --no-scripts
 
-# Build frontend assets
-RUN apt-get update && apt-get install -y nodejs npm \
+# Copy source code
+COPY . .
+
+# Node + npm
+RUN apt-get update \
+    && apt-get install -y nodejs npm \
     && npm install \
     && npm run build \
     && rm -rf /var/lib/apt/lists/*
 
-# Laravel permissions
-RUN mkdir -p storage/framework/cache \
+# Laravel directories
+RUN mkdir -p \
+    storage/framework/cache \
     storage/framework/sessions \
     storage/framework/views \
     storage/logs \
+    bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# FrankenPHP chạy Laravel
+EXPOSE 80
+
 CMD ["frankenphp", "php-server", "--listen", ":80", "--root", "/app/public"]
