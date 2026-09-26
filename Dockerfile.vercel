@@ -1,5 +1,7 @@
 FROM dunglas/frankenphp:php8.3
 
+RUN echo "=== MY VERCEL DOCKERFILE V2 ==="
+
 WORKDIR /app
 
 RUN install-php-extensions \
